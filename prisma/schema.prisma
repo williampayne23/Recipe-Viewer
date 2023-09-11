@@ -13,11 +13,28 @@ datasource db {
     // https://www.prisma.io/docs/reference/api-reference/prisma-schema-reference#string
     url      = env("DATABASE_URL")
 }
+model Recipe {
+    id      Int      @id @default(autoincrement())
+    name String
+    instructions String
+    recipeIngredients   RecipeIngredientLink[]
+    image String
+}
 
-model Example {
-    id        String   @id @default(cuid())
-    createdAt DateTime @default(now())
-    updatedAt DateTime @updatedAt
+model RecipeIngredientLink {
+    @@id([recipeId, ingredientId])
+    recipe      Recipe      @relation(fields: [recipeId], references: [id])
+    recipeId    Int
+    ingredient  Ingredient  @relation(fields: [ingredientId], references: [id])
+    ingredientId Int
+    amount      Float
+}
+
+model Ingredient {
+    id              Int      @id @default(autoincrement())
+    name            String
+    unit            String
+    recipesLinks    RecipeIngredientLink[]
 }
 
 // Necessary for Next auth
