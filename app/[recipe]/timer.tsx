@@ -2,35 +2,33 @@
 import React, { useState, useEffect } from "react";
 
 export function Timer() {
-  const [minutes, setMinutes] = useState(0);
-  const [seconds, setSeconds] = useState(0);
+  const [minutes, setMinutes] = useState(
+    Number(window.localStorage.getItem("minutes")) ?? 0,
+  );
+  const [seconds, setSeconds] = useState(
+    Number(window.localStorage.getItem("seconds")) ?? 0,
+  );
 
   const addMinutes = (increment: number) => {
     setMinutes(minutes + increment);
   };
 
+  const resetTimer = () => {
+    setMinutes(0);
+    setSeconds(0);
+  };
+
   useEffect(() => {
-    const savedMinutes = window.localStorage.getItem("minutes");
-    const savedSeconds = window.localStorage.getItem("seconds");
-
-    console.log(savedMinutes);
-    if (savedMinutes) {
-      setMinutes(Number(savedMinutes));
-    }
-
-    if (savedSeconds) {
-      setSeconds(Number(savedSeconds));
-    }
-  }, []);
+    window.localStorage.setItem("minutes", minutes.toString());
+    window.localStorage.setItem("seconds", seconds.toString());
+  }, [minutes, seconds]);
 
   useEffect(() => {
     const timer = setInterval(() => {
       if (seconds > 0) {
         setSeconds(seconds - 1);
-        window.localStorage.setItem("seconds", (seconds - 1).toString());
       } else if (minutes > 0) {
         setMinutes(minutes - 1);
-        window.localStorage.setItem("minutes", (minutes - 1).toString());
         setSeconds(59);
       }
     }, 1000);
@@ -39,7 +37,7 @@ export function Timer() {
 
   return (
     <>
-      <div className="m-2 rounded-xl bg-white p-10 shadow-lg">
+      <div className="rounded-xl bg-white p-10 shadow-lg">
         <p className="text-center text-2xl font-bold">
           {minutes.toString().padStart(2, "0")}:
           {seconds.toString().padStart(2, "0")}
@@ -62,6 +60,12 @@ export function Timer() {
             onClick={() => addMinutes(10)}
           >
             + 10 mins
+          </button>
+          <button
+            className="ml-4 rounded bg-red-500 px-4 py-2 text-white hover:bg-red-700"
+            onClick={resetTimer}
+          >
+            Reset
           </button>
         </div>
       </div>

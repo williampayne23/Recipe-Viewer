@@ -1,25 +1,26 @@
 import { z } from "zod";
 
-import {
-  createTRPCRouter,
-  protectedProcedure,
-  publicProcedure,
-} from "~/server/api/trpc";
+import { createTRPCRouter, publicProcedure } from "~/server/api/trpc";
+import { prisma } from "~/server/db";
 
 export const exampleRouter = createTRPCRouter({
-  hello: publicProcedure
-    .input(z.object({ text: z.string() }))
-    .query(({ input }) => {
-      return {
-        greeting: `Hello ${input.text}`,
-      };
+  updateInstruction: publicProcedure
+    .input(
+      z.object({
+        instruction: z.string(),
+        id: z.number(),
+      }),
+    )
+    .mutation(({ input }) => {
+      prisma.recipe
+        .update({
+          where: {
+            id: input.id,
+          },
+          data: {
+            instructions: input.instruction,
+          },
+        })
+        .catch(console.error);
     }),
-
-  getAll: publicProcedure.query(({ ctx }) => {
-    return ctx.prisma.example.findMany();
-  }),
-
-  getSecretMessage: protectedProcedure.query(() => {
-    return "you can now see this secret message!";
-  }),
 });

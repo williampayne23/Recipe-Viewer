@@ -4,11 +4,14 @@ export const metadata = {
 };
 
 import "~/styles/globals.css";
+import TrpcProvider from "./trpcProvider";
 
 function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en">
-      <body>{children}</body>
+      <TrpcProvider>
+        <body>{children}</body>
+      </TrpcProvider>
     </html>
   );
 }
