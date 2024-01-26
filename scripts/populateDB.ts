@@ -6,19 +6,13 @@ const base = new Airtable({
     "pattaWqmvCYS5RPtf.20b0fa36c887e956aa91787f23fa67e55085c0db72095d0b6cd76616f29d5be4",
 }).base("appf3IS8s4qcM82G7");
 
-function getAllOfTable(tableName: string) {
+function getAllOfTable(tableName: string, fields: string[]) {
   const table = base.table(tableName);
   return new Promise((resolve, reject) => {
     table
       .select({
         view: "Grid view",
-        fields: [
-          "Name",
-          "Instructions",
-          "Ingredients Links",
-          "image",
-          "Next eat",
-        ],
+        fields: fields,
       })
       .all((err, records) => {
         if (err) {
@@ -31,6 +25,7 @@ function getAllOfTable(tableName: string) {
 }
 
 type Meal = {
+  id: string;
   fields: {
     Name: string;
     image: [
@@ -69,23 +64,82 @@ function slugifyName(name: string) {
     .replace(/(^-|-$)/g, "");
 }
 
-const meals = (await getAllOfTable("Meals")) as Meal[];
-const promises = meals.map((m) => {
-  return prisma.recipe
-    .create({
-      data: {
-        name: m.fields.Name ?? "",
-        nextEat:
-          m.fields["Next eat"] == undefined
-            ? undefined
-            : new Date(m.fields["Next eat"]),
-        image: `/${slugifyName(m.fields.Name)}.jpg`,
-        instructions: m.fields.Instructions ?? "",
-      },
-    })
-    .catch(console.error);
-});
-await Promise.all(promises).catch(console.error);
-console.log("Done");
+type Ingredient = {
+  id: string;
+  fields: {
+    Name: string;
+    Unit: string;
+  };
+};
 
-// main().catch(console.error);
+type IngredientLink = {
+  id: string;
+  fields: {
+    Meals: string;
+    Ingredient: string;
+    Amount: number;
+  };
+};
+
+const meals = (await getAllOfTable("Meals", [
+  "Name",
+  "Instructions",
+  "Ingredients Links",
+  "image",
+  "Next eat",
+])) as Meal[];
+const ingredients = (await getAllOfTable("Ingredients", [
+  "Name",
+  "Unit",
+])) as Ingredient[];
+const ingredientLinks = (await getAllOfTable("Meal <-> Ingredients", [
+  "Meals",
+  "Ingredient",
+  "Amount",
+])) as IngredientLink[];
+
+const links = ingredientLinks.map((l) => {
+  const meal = meals.find((m) => l.fields.Meals.includes(m.id));
+  const ingredient = ingredients.find((m) =>
+    l.fields.Ingredient.includes(m.id),
+  );
+  if (meal == undefined) return null;
+  if (ingredient == undefined) return null;
+  return {
+    meal,
+    ingredient,
+    amount: l.fields.Amount,
+  };
+});
+
+//eslint-disable-next-line @typescript-eslint/no-misused-promises
+await Promise.all(
+  links.map(async (l) => {
+    if (l == null) return;
+    const meal = await prisma.recipe.findFirst({
+      where: {
+        name: l.meal.fields.Name,
+      },
+    });
+    const ingredient = await prisma.ingredient.findFirst({
+      where: {
+        name: l.ingredient.fields.Name,
+      },
+    });
+    if (meal == null) {
+      console.log("NO MEAL");
+      return;
+    }
+    if (ingredient == null) {
+      console.log("NO INGREDIENT");
+      return;
+    }
+    return await prisma.recipeIngredientLink.create({
+      data: {
+        ingredientId: ingredient.id,
+        recipeId: meal.id,
+        amount: l.amount,
+      },
+    });
+  }),
+);

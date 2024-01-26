@@ -1,15 +1,22 @@
 "use server";
 
-import { type Recipe } from "@prisma/client";
+import { type Ingredient, type Recipe } from "@prisma/client";
 import { prisma } from "~/server/db";
 
 export async function getRecipes() {
   return await prisma.recipe.findMany();
 }
 
-export type RecipeWithIngredients = Awaited<
-  ReturnType<typeof getRecipeWithIngredients>
->;
+export type RecipeWithIngredients = Recipe & {
+  ingredients: RecipeIngredient[];
+};
+
+export type RecipeIngredient = {
+  amount: number;
+  id: number;
+  name: string;
+  unit: string | null;
+};
 
 export async function getRecipeWithIngredients(id: number) {
   const recipe = await prisma.recipe.findFirst({
@@ -82,4 +89,36 @@ async function getRecipeIngredients(recipe: Recipe) {
     (typeof ingredients)[0],
     null
   >[];
+}
+
+export async function deleteIngredientLink(
+  recipeId: number,
+  ingredientId: number,
+) {
+  return prisma.recipeIngredientLink
+    .deleteMany({
+      where: {
+        recipeId,
+        ingredientId,
+      },
+    })
+    .catch(console.error);
+}
+
+export async function getIngredients() {
+  return await prisma.ingredient.findMany();
+}
+
+export async function createIngredientLink(
+  ingredient: Ingredient,
+  amount: number,
+  recipe: Recipe,
+) {
+  return await prisma.recipeIngredientLink.create({
+    data: {
+      amount,
+      ingredientId: ingredient.id,
+      recipeId: recipe.id,
+    },
+  });
 }
